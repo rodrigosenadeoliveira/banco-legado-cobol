@@ -303,34 +303,34 @@ Esta arquitetura foi desenhada para **simular um banco legado de forma rápida e
 
 ```mermaid
 flowchart LR
-  %% =====================
-  %% LEGENDA
-  %% =====================
+  %% Legenda de cores
   classDef done fill:#16a34a,stroke:#065f46,color:#ffffff;
   classDef todo fill:#dc2626,stroke:#7f1d1d,color:#ffffff;
   classDef neutral fill:#0ea5e9,stroke:#075985,color:#ffffff;
 
-  subgraph Atual[Implementado hoje (executável no projeto)]
+  subgraph Atual[Implementado hoje]
     direction LR
 
-    DEV[Dev macOS/Linux\nScripts .sh]:::neutral
+    DEV[Dev local / scripts]:::neutral
 
-    DOCKER[Docker Compose\ninfra/docker/compose.yml]:::done
-    PG[(PostgreSQL 15\ncontainer: banco-postgres)]:::done
+    DOCKER[Docker Compose]:::done
+    PG[(PostgreSQL 15 - banco-postgres)]:::done
 
-    DDL[DDL\nPostgreSQL/ddl/create_tables.sql]:::done
-    DML[DML\nPostgreSQL/dml/insert_mock_data.sql]:::done
+    DDL[DDL create_tables.sql]:::done
+    DML[DML insert_mock_data.sql]:::done
 
-    COB_TELA[COBOL - leitura_extrato.cob\n(programa de tela)]:::done
-    COB_BATCH[COBOL - gera_relatorio_txt.cob\n(batch)]:::done
+    COB_TELA[COBOL leitura_extrato.cob]:::done
+    COB_BATCH[COBOL gera_relatorio_txt.cob]:::done
 
-    OUTCSV[output/extrato.csv]:::done
-    OUTTXT[output/relatorio.txt]:::done
+    OUTCSV[output extrato.csv]:::done
+    OUTTXT[output relatorio.txt]:::done
 
     DEMO1[demo_banco_legado_cobol.sh]:::done
     DEMO2[demo_banco_legado_cobol_showcase.sh]:::done
 
-    DEV --> DOCKER --> PG
+    DEV --> DEMO1 --> DOCKER --> PG
+    DEV --> DEMO2 --> DOCKER
+
     DDL --> PG
     DML --> PG
 
@@ -339,37 +339,30 @@ flowchart LR
 
     OUTCSV --> COB_TELA
     COB_BATCH --> OUTTXT
-
-    DEV --> DEMO1
-    DEV --> DEMO2
-    DEMO1 --> DOCKER
-    DEMO1 --> COB_TELA
-    DEMO1 --> COB_BATCH
   end
 
-  subgraph Futuro[Não implementado (visão de modernização)]
+  subgraph Futuro[Visao de modernizacao (nao implementado)]
     direction LR
 
-    API[API / BFF\n(FastAPI, Spring, etc.)]:::todo
-    ACL[Anti-Corruption Layer\n(contratos/DTOs/adapters)]:::todo
-    MS1[Microserviço Extrato]:::todo
-    MS2[Microserviço Transações]:::todo
-    MS3[Microserviço Relatórios]:::todo
+    API[API / BFF]:::todo
+    ACL[Anti corruption layer]:::todo
 
-    EVT[Eventos / Mensageria\n(Kafka/Rabbit)]:::todo
-    CDC[CDC / Outbox\n(sync legado→novo)]:::todo
+    MS1[Microservico extrato]:::todo
+    MS2[Microservico transacoes]:::todo
+    MS3[Microservico relatorios]:::todo
 
-    OBS[Observabilidade\nlogs, métricas, tracing]:::todo
-    SEC[Segurança\nOAuth2/JWT, RBAC]:::todo
-    CI[CI/CD\n(build/test/deploy)]:::todo
+    EVT[Eventos / mensageria]:::todo
+    CDC[CDC / outbox]:::todo
+
+    OBS[Observabilidade]:::todo
+    SEC[Seguranca]:::todo
+    CI[CI CD]:::todo
 
     API --> ACL
     ACL --> MS1
     ACL --> MS2
     ACL --> MS3
 
-    MS1 --> EVT
-    MS2 --> EVT
     PG -.-> CDC
     CDC --> EVT
 
@@ -377,16 +370,17 @@ flowchart LR
     MS1 --> OBS
     MS2 --> OBS
     MS3 --> OBS
+
     API --> SEC
     API --> CI
   end
 
-  %% Conexões visão (ponte do legado para o novo)
-  COB_TELA -. leitura/extração .-> API
-  COB_BATCH -. relatórios/saídas .-> MS3
-  PG -. dados atuais (SoR) .-> API
+  %% Ponte de modernizacao (visao)
+  PG -.-> API
+  COB_TELA -.-> API
+  COB_BATCH -.-> MS3
 ```
 
-- **Verde:** já existe no repositório e roda local.
-- **Vermelho:** intenção/roadmap (microserviços e boas práticas de modernização lendo/isolando o legado).
+- **Verde:** implementado e executavel no repositorio.
+- **Vermelho:** visao/roadmap (microservicos e boas praticas de modernizacao).
 
