@@ -256,32 +256,137 @@ git push -u origin main
 
 ---
 
-# ⚖️ Decisões e Trade-offs
+# ⚖️ Decisões e Trade-offs (Arquitetura atual)
 
-### Por que esse README funciona?
+Esta arquitetura foi desenhada para **simular um banco legado de forma rápida e reproduzível**, com objetivo de **testar/validar padrões arquiteturais de modernização** (ex.: Strangler Pattern, extração incremental de capacidades do monólito, APIs/anti-corruption layer) em um cenário próximo do que existe em bancos e grandes empresas.
 
-| Elemento       | Impacto                   |
-| -------------- | ------------------------- |
-| Objetivo claro | recrutador entende rápido |
-| Arquitetura    | mostra visão              |
-| Modernização   | mostra futuro             |
-| Simplicidade   | evita overengineering     |
+## Decisões
+
+- **COBOL como “core legado”**
+  - **Por quê:** representa um monólito legado típico (batch/tela, forte acoplamento a arquivos/processos, evolução lenta).
+  - **Trade-off:** não busca a melhor DX; busca realismo do legado.
+
+- **PostgreSQL no lugar de Db2**
+  - **Por quê:** viabiliza execução local no macOS com baixo atrito (Docker), mantendo o modelo relacional e SQL próximo do mundo corporativo.
+  - **Trade-off:** perde-se fidelidade 1:1 com ambientes Db2/mainframe, mas ganha-se velocidade para experimentação.
+
+- **Docker Compose para infraestrutura**
+  - **Por quê:** provisionamento consistente (“rodar em qualquer máquina”), reproducibilidade de demo e facilidade de reset do ambiente.
+  - **Trade-off:** ainda não há automação completa de init (schema + carga) no `compose` — hoje depende de execução manual ou scripts.
+
+- **Separação por pastas (core / infra / SQL / output)**
+  - **Por quê:** espelha uma separação por responsabilidades comum em modernizações reais:
+    - `cobol-core/`: domínio e processamento legado
+    - `PostgreSQL/`: contratos de dados (DDL/DML)
+    - `infra/`: ambiente de execução
+    - `output/`: artefatos gerados (evidência do batch)
+  - **Trade-off:** ainda não é uma decomposição em serviços; é uma base organizada para evoluir.
+
+- **Scripts de demo como “pipeline executável”**
+  - **Por quê:** o projeto prioriza **ser demonstrável** (rodar do zero ao extrato/relatório) para validar hipóteses de arquitetura e orientar discussões.
+  - **Trade-off:** scripts podem ficar opinativos (paths/nomes), mas dão previsibilidade de execução.
+
+- **Foco em cenário mínimo (clientes/contas/transações)**
+  - **Por quê:** reduz escopo para validar padrões (observabilidade, extração de serviços, contratos) sem virar um “ERP gigante”.
+  - **Trade-off:** não cobre todas as complexidades bancárias; é um recorte intencional.
+
+## Como isso ajuda a testar migração monólito → microserviços
+
+- Permite tratar o COBOL como **“sistema de registro”** e criar ao redor:
+  - uma camada de **API** (futuro) como anti-corruption layer
+  - **extração incremental de capacidades** (ex.: extrato, relatório, transações) para serviços independentes
+  - experimentos com **sincronização de dados**, eventos, CDC (futuro)
 
 ---
 
-# 🧼 Boas práticas aplicadas
+## 🔎 Diagrama (Mermaid) — O que existe vs. o que é visão de modernização
 
-* Clareza > volume
-* Linguagem executiva
-* Separação de camadas
-* Narrativa orientada a negócio
+```mermaid
+flowchart LR
+  %% =====================
+  %% LEGENDA
+  %% =====================
+  classDef done fill:#16a34a,stroke:#065f46,color:#ffffff;
+  classDef todo fill:#dc2626,stroke:#7f1d1d,color:#ffffff;
+  classDef neutral fill:#0ea5e9,stroke:#075985,color:#ffffff;
 
----
+  subgraph Atual[Implementado hoje (executável no projeto)]
+    direction LR
 
-# ⚠️ Riscos
+    DEV[Dev macOS/Linux\nScripts .sh]:::neutral
 
-| Risco                 | Mitigação                 |
-| --------------------- | ------------------------- |
-| README técnico demais | manter visão de negócio   |
-| Muito simples         | adicionar arquitetura     |
-| Falta de contexto     | explicar cenário bancário |
+    DOCKER[Docker Compose\ninfra/docker/compose.yml]:::done
+    PG[(PostgreSQL 15\ncontainer: banco-postgres)]:::done
+
+    DDL[DDL\nPostgreSQL/ddl/create_tables.sql]:::done
+    DML[DML\nPostgreSQL/dml/insert_mock_data.sql]:::done
+
+    COB_TELA[COBOL - leitura_extrato.cob\n(programa de tela)]:::done
+    COB_BATCH[COBOL - gera_relatorio_txt.cob\n(batch)]:::done
+
+    OUTCSV[output/extrato.csv]:::done
+    OUTTXT[output/relatorio.txt]:::done
+
+    DEMO1[demo_banco_legado_cobol.sh]:::done
+    DEMO2[demo_banco_legado_cobol_showcase.sh]:::done
+
+    DEV --> DOCKER --> PG
+    DDL --> PG
+    DML --> PG
+
+    PG --> COB_TELA
+    PG --> COB_BATCH
+
+    OUTCSV --> COB_TELA
+    COB_BATCH --> OUTTXT
+
+    DEV --> DEMO1
+    DEV --> DEMO2
+    DEMO1 --> DOCKER
+    DEMO1 --> COB_TELA
+    DEMO1 --> COB_BATCH
+  end
+
+  subgraph Futuro[Não implementado (visão de modernização)]
+    direction LR
+
+    API[API / BFF\n(FastAPI, Spring, etc.)]:::todo
+    ACL[Anti-Corruption Layer\n(contratos/DTOs/adapters)]:::todo
+    MS1[Microserviço Extrato]:::todo
+    MS2[Microserviço Transações]:::todo
+    MS3[Microserviço Relatórios]:::todo
+
+    EVT[Eventos / Mensageria\n(Kafka/Rabbit)]:::todo
+    CDC[CDC / Outbox\n(sync legado→novo)]:::todo
+
+    OBS[Observabilidade\nlogs, métricas, tracing]:::todo
+    SEC[Segurança\nOAuth2/JWT, RBAC]:::todo
+    CI[CI/CD\n(build/test/deploy)]:::todo
+
+    API --> ACL
+    ACL --> MS1
+    ACL --> MS2
+    ACL --> MS3
+
+    MS1 --> EVT
+    MS2 --> EVT
+    PG -.-> CDC
+    CDC --> EVT
+
+    API --> OBS
+    MS1 --> OBS
+    MS2 --> OBS
+    MS3 --> OBS
+    API --> SEC
+    API --> CI
+  end
+
+  %% Conexões visão (ponte do legado para o novo)
+  COB_TELA -. leitura/extração .-> API
+  COB_BATCH -. relatórios/saídas .-> MS3
+  PG -. dados atuais (SoR) .-> API
+```
+
+- **Verde:** já existe no repositório e roda local.
+- **Vermelho:** intenção/roadmap (microserviços e boas práticas de modernização lendo/isolando o legado).
+
