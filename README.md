@@ -1,18 +1,3 @@
-## 🧠 Resumo Executivo
-
-Esse README não é documentação — é sua **arma de posicionamento**.
-Ele precisa comunicar 3 coisas em segundos:
-
-1. Você entende legado (COBOL + Db2)
-2. Você pensa como arquiteto (separação, camadas, decisão)
-3. Você sabe modernizar (visão futura)
-
-👉 Vou te entregar um README **pronto + comentado**, e te guiar na construção.
-
----
-
-# 🧱 README.md — Versão Profissional (use isso)
-
 # 🏦 Banco Legado COBOL
 
 Simulação de um core bancário legado utilizando COBOL e Db2, estruturado com princípios modernos de arquitetura para demonstrar estratégias reais de modernização de sistemas críticos.
