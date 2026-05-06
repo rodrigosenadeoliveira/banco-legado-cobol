@@ -1,0 +1,18 @@
+==============================
+      EXTRATO BANCARIO
+==============================
+
+Cliente       : RODRIGO
+Saldo Inicial :        12,500.00
+
+Transacoes:
++         1,000.00 (CREDITO)
+-           200.00 (DEBITO)
+-            50.00 (DEBITO)
+
+==============================
+RESUMO
+Total Creditos:         1,000.00
+Total Debitos :           250.00
+Saldo Final   :        13,250.00
+==============================
