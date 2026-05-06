@@ -303,30 +303,28 @@ Esta arquitetura foi desenhada para **simular um banco legado de forma rápida e
 
 ```mermaid
 flowchart LR
-  %% Legenda de cores
-  classDef done fill:#16a34a,stroke:#065f46,color:#ffffff;
-  classDef todo fill:#dc2626,stroke:#7f1d1d,color:#ffffff;
-  classDef neutral fill:#0ea5e9,stroke:#075985,color:#ffffff;
+  classDef done fill:#16a34a,stroke:#065f46,color:#ffffff
+  classDef todo fill:#dc2626,stroke:#7f1d1d,color:#ffffff
+  classDef neutral fill:#0ea5e9,stroke:#075985,color:#ffffff
 
-  subgraph Atual[Implementado hoje]
+  subgraph Atual[Implementado]
     direction LR
 
-    DEV[Dev local / scripts]:::neutral
-
+    DEV[Dev local scripts]:::neutral
     DOCKER[Docker Compose]:::done
-    PG[(PostgreSQL 15 - banco-postgres)]:::done
+    PG[(PostgreSQL 15 banco_postgres)]:::done
 
-    DDL[DDL create_tables.sql]:::done
-    DML[DML insert_mock_data.sql]:::done
+    DDL[DDL create_tables]:::done
+    DML[DML insert_mock_data]:::done
 
-    COB_TELA[COBOL leitura_extrato.cob]:::done
-    COB_BATCH[COBOL gera_relatorio_txt.cob]:::done
+    COB_TELA[COBOL leitura_extrato]:::done
+    COB_BATCH[COBOL gera_relatorio_txt]:::done
 
-    OUTCSV[output extrato.csv]:::done
-    OUTTXT[output relatorio.txt]:::done
+    OUTCSV[output extrato_csv]:::done
+    OUTTXT[output relatorio_txt]:::done
 
-    DEMO1[demo_banco_legado_cobol.sh]:::done
-    DEMO2[demo_banco_legado_cobol_showcase.sh]:::done
+    DEMO1[demo_banco_legado_cobol]:::done
+    DEMO2[demo_banco_legado_cobol_showcase]:::done
 
     DEV --> DEMO1 --> DOCKER --> PG
     DEV --> DEMO2 --> DOCKER
@@ -341,22 +339,22 @@ flowchart LR
     COB_BATCH --> OUTTXT
   end
 
-  subgraph Futuro[Visao de modernizacao (nao implementado)]
+  subgraph Futuro[Nao_implementado]
     direction LR
 
-    API[API / BFF]:::todo
-    ACL[Anti corruption layer]:::todo
+    API[API_BFF]:::todo
+    ACL[Anti_corruption_layer]:::todo
 
-    MS1[Microservico extrato]:::todo
-    MS2[Microservico transacoes]:::todo
-    MS3[Microservico relatorios]:::todo
+    MS1[Microservico_extrato]:::todo
+    MS2[Microservico_transacoes]:::todo
+    MS3[Microservico_relatorios]:::todo
 
-    EVT[Eventos / mensageria]:::todo
-    CDC[CDC / outbox]:::todo
+    EVT[Eventos_mensageria]:::todo
+    CDC[CDC_outbox]:::todo
 
     OBS[Observabilidade]:::todo
     SEC[Seguranca]:::todo
-    CI[CI CD]:::todo
+    CI[CI_CD]:::todo
 
     API --> ACL
     ACL --> MS1
@@ -375,7 +373,6 @@ flowchart LR
     API --> CI
   end
 
-  %% Ponte de modernizacao (visao)
   PG -.-> API
   COB_TELA -.-> API
   COB_BATCH -.-> MS3
