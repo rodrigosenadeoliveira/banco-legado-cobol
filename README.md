@@ -1,149 +1,216 @@
 # 🏦 Banco Legado COBOL
 
-Simulação de um core bancário legado utilizando COBOL e Db2, estruturado com princípios modernos de arquitetura para demonstrar estratégias reais de modernização de sistemas críticos.
+Simulação de um **core bancário legado** utilizando **COBOL** e **PostgreSQL**, estruturado para demonstrar como sistemas críticos “mainframe-like” podem ser executados localmente e modernizados de forma incremental.
+
+> **Nota (mudança de stack):** o projeto começou com **Db2**, mas foi migrado para **PostgreSQL** por compatibilidade/execução mais simples no macOS.
 
 ---
 
 ## 🎯 Objetivo
 
-Este projeto tem como objetivo simular um cenário real de sistemas bancários legados, onde:
+Demonstrar, de ponta a ponta:
 
-* A lógica de negócio é implementada em COBOL
-* Os dados são persistidos em Db2
-* A infraestrutura é provisionada via Docker
-* A arquitetura é organizada de forma modular e escalável
-
----
-
-## 🧠 Contexto
-
-Grande parte dos bancos ainda opera sistemas críticos baseados em COBOL, integrados a bancos de dados robustos como o IBM Db2.
-
-Este projeto demonstra:
-
-* Como esses sistemas funcionam internamente
-* Quais são seus desafios
-* Como podem ser modernizados de forma incremental
+- Um domínio bancário mínimo (clientes, contas, transações)
+- Um “core” em COBOL que lê/gera saídas (extrato/relatório)
+- Infra local via Docker para levantar o banco
+- Uma base para discutir modernização (Strangler, APIs, etc.)
 
 ---
 
-## 🏗️ Arquitetura
+## 🏗️ Visão de Arquitetura
 
 ```text
-+---------------------+
-|     COBOL Core      |
-| (Lógica de Negócio) |
-+----------+----------+
-           |
-           v
-+---------------------+
-|        Db2          |
-|   (Persistência)    |
-+----------+----------+
-           |
-           v
-+---------------------+
-|   Infraestrutura    |
-|     (Docker)        |
-+---------------------+
++-------------------------+
+|       COBOL Core        |
+|  (programas batch/tela) |
++------------+------------+
+             |
+             v
++-------------------------+
+|       PostgreSQL        |
+| (persistência via SQL)  |
++------------+------------+
+             |
+             v
++-------------------------+
+|   Infra (Docker/Compose)|
++-------------------------+
 ```
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Estrutura do Projeto (atual)
 
-```bash
+```text
 banco-legado-cobol/
-│
-├── cobol-core/        # Lógica de negócio em COBOL
-├── db2-database/      # Scripts SQL (DDL/DML)
-├── infra/             # Docker e infraestrutura
-├── docs/              # Documentação e decisões arquiteturais
-├── tests/             # Testes (futuro)
-│
-├── Makefile           # Automação de comandos
-└── README.md
+├── cobol-core/
+│   └── src/
+│       ├── leitura_extrato.cob        # Programa COBOL (tela) para leitura de extrato
+│       ├── gera_relatorio_txt.cob     # Programa COBOL (batch) para gerar relatório em TXT
+│       ├── extrato/                   # Binário/artefatos gerados (quando compilado)
+│       └── gera_relatorio_txt/        # Binário/artefatos gerados (quando compilado)
+├── PostgreSQL/
+│   ├── ddl/
+│   │   └── 📄 create_tables.sql        # DDL (clientes, contas, transacoes)
+│   └── dml/
+│       └── insert_mock_data.sql       # Carga inicial (mock)
+├── infra/
+│   └── docker/
+│       ├── compose.yml                # PostgreSQL (container: banco-postgres)
+│       ├── start.sh                   # Sobe o compose
+│       └── stop.sh                    # (placeholder) parar ambiente
+├── output/
+│   ├── extrato.csv                    # Saída/insumo de exemplo
+│   └── relatorio.txt                  # Gerado pelo COBOL (quando executado)
+├── demo_banco_legado_cobol.sh         # Demo automatizada (passo a passo)
+├── demo_banco_legado_cobol_showcase.sh# Demo automatizada (modo “apresentação”)
+├── README.md
+└── Readme.txt                         # Guia rápido (anotações)
 ```
 
 ---
 
-## ⚙️ Como executar
+## ✅ Pré-requisitos
 
-### 1. Subir o banco Db2
+- Docker Desktop (ou Docker Engine) com suporte a `docker compose`
+- GnuCOBOL (`cobc`) instalado
+- macOS / Linux (scripts `*.sh`)
+
+---
+
+## ⚙️ Como executar (fluxo real do projeto)
+
+### 1) Subir o PostgreSQL via Docker
 
 ```bash
-cd infra
-docker-compose up -d
+cd infra/docker
+docker compose up -d
 ```
 
----
+O container sobe como **`banco-postgres`** com as credenciais:
 
-### 2. Criar estrutura do banco
+- usuário: `admin`
+- senha: `admin`
+- database: `banco`
+- porta: `5432`
+
+### 2) Criar tabelas e inserir dados mock
+
+Você pode executar os scripts SQL dentro do container.
+
+Criar tabelas:
 
 ```bash
-cd db2-database
-# executar scripts SQL manualmente ou via script
+docker exec -i banco-postgres psql -U admin -d banco < "../../PostgreSQL/ddl/📄 create_tables.sql"
 ```
 
----
-
-### 3. Executar programa COBOL
+Inserir mock:
 
 ```bash
-cd cobol-core
-./scripts/compile.sh
-./scripts/run.sh
+docker exec -i banco-postgres psql -U admin -d banco < "../../PostgreSQL/dml/insert_mock_data.sql"
+```
+
+### 3) Validar com consultas
+
+```bash
+docker exec -it banco-postgres psql -U admin -d banco
+```
+
+Dentro do `psql`:
+
+```sql
+SELECT * FROM clientes;
+SELECT * FROM contas;
+SELECT * FROM transacoes;
+```
+
+Para simular um extrato (cliente 1):
+
+```sql
+SELECT 
+    c.nome,
+    co.saldo,
+    t.tipo,
+    t.valor,
+    t.data
+FROM clientes c
+JOIN contas co ON c.id = co.cliente_id
+JOIN transacoes t ON co.id = t.conta_id
+WHERE c.id = 1
+ORDER BY t.data DESC;
+```
+
+### 4) Compilar e executar os programas COBOL
+
+```bash
+cd ../../cobol-core/src
+
+# Programa de tela
+cobc -x leitura_extrato.cob -o extrato
+./extrato
+
+# Programa batch (gera arquivo em output/)
+cobc -x gera_relatorio_txt.cob -o gera_relatorio_txt
+./gera_relatorio_txt
+```
+
+Saídas esperadas:
+
+- `output/relatorio.txt`
+- (dependendo do fluxo) leituras/escritas usando `output/extrato.csv`
+
+---
+
+## 🎬 Scripts de demo
+
+- `demo_banco_legado_cobol.sh`: executa o fluxo completo (Docker → queries → compila/roda COBOL → valida `output/`)
+- `demo_banco_legado_cobol_showcase.sh`: variação com banner/estilo para apresentação
+
+Para rodar:
+
+```bash
+chmod +x demo_banco_legado_cobol.sh demo_banco_legado_cobol_showcase.sh
+./demo_banco_legado_cobol_showcase.sh
+```
+
+Dica: sem pausas entre etapas:
+
+```bash
+INTERACTIVE_DEMO=0 ./demo_banco_legado_cobol_showcase.sh
 ```
 
 ---
 
-## 💡 Caso de Uso
+## 🧩 Modelo de Dados (PostgreSQL)
 
-Consulta de saldo e movimentações de um cliente:
+Tabelas:
 
-* Busca dados do cliente
-* Consulta conta associada
-* Exibe saldo atual
-* Lista últimas transações
+- `clientes(id, nome)`
+- `contas(id, cliente_id, saldo)`
+- `transacoes(id, conta_id, tipo, valor, data)`
 
----
+Scripts:
 
-## ⚖️ Decisões Arquiteturais
-
-* Uso de mono-repo para facilitar setup e entendimento
-* Separação clara entre:
-
-  * lógica de negócio (COBOL)
-  * dados (Db2)
-  * infraestrutura (Docker)
-* Simulação de ambiente real sem dependência de mainframe
+- DDL: `PostgreSQL/ddl/📄 create_tables.sql`
+- DML: `PostgreSQL/dml/insert_mock_data.sql`
 
 ---
 
-## ☁️ Estratégia de Modernização
+## 🗺️ Modernização (direção do projeto)
 
-Este projeto pode evoluir para:
+Possíveis próximos passos:
 
-* Exposição via API (Python / FastAPI)
-* Migração para cloud (AWS)
-* Substituição gradual do COBOL (Strangler Pattern)
-
----
-
-## 🚀 Próximos Passos
-
-* [ ] Integração COBOL com Db2 via ODBC
-* [ ] Criação de API moderna
-* [ ] Observabilidade (logs e métricas)
-* [ ] Testes automatizados
+- Expor o core via API (ex.: FastAPI) como camada anti-corruption
+- Observabilidade (logs estruturados, tracing)
+- “Strangler Pattern” para substituir partes do legado com baixo risco
 
 ---
 
-## 🧠 Aprendizados
+## 🚧 Pendências técnicas
 
-* Complexidade de sistemas legados não está na linguagem, mas no ecossistema
-* Separação de responsabilidades é essencial mesmo em sistemas antigos
-* Modernização deve ser incremental e orientada a risco
+- `infra/docker/stop.sh` ainda não está implementado (placeholder)
+- Automatizar carga do SQL no `docker compose` (init scripts) para `up` já subir com schema+mock
+- Integração direta COBOL ↔ PostgreSQL (ex.: ODBC) caso o objetivo evolua
 
 ---
 
@@ -218,5 +285,3 @@ git push -u origin main
 | README técnico demais | manter visão de negócio   |
 | Muito simples         | adicionar arquitetura     |
 | Falta de contexto     | explicar cenário bancário |
-
----
