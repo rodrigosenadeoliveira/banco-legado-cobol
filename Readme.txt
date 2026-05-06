@@ -3,6 +3,9 @@
 chmod +x demo_banco_legado_cobol.sh
 ./demo_banco_legado_cobol.sh
 
+chmod +x demo_banco_legado_cobol_showcase.sh
+./demo_banco_legado_cobol_showcase.sh
+
 */
 
 
