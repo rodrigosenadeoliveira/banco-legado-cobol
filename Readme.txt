@@ -1,3 +1,11 @@
+/*  executar no terminal
+
+chmod +x demo_banco_legado_cobol.sh
+./demo_banco_legado_cobol.sh
+
+*/
+
+
 from pathlib import Path
 
 content = """GUIA DE RECUPERACAO RAPIDA - BANCO LEGADO COBOL
